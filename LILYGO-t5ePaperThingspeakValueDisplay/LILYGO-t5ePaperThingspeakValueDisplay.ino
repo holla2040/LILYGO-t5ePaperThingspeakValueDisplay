@@ -107,6 +107,7 @@ void displayUpdate(String label, String ts, String value) {
 }
 
 void getReading() {
+  for (int i = 0; i < 5; i++) {
     HTTPClient http;
     http.begin(TS_URL);
     int httpCode = http.GET();
@@ -116,10 +117,13 @@ void getReading() {
             deserializeJson(reading, payload);
             Serial.println(payload);
             // displayUpdate(LABEL, reading["created_at"], reading["field2"]);
+            return;
         }
     } else {
         Serial.printf("HTTP error: %s\n", http.errorToString(httpCode).c_str());
     }
+    delay(1000);
+  }
 }
 
 void loop() {
