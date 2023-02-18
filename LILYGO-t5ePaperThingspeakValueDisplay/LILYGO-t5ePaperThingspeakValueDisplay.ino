@@ -12,7 +12,6 @@
 #include <SPI.h>
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
-#include <WiFiManager.h>
 
 #include <GxEPD2_BW.h>
 #include <Fonts/FreeMonoBold9pt7b.h>
@@ -31,33 +30,20 @@ uint32_t now, updatePeriod = 60000;
 
 float vmin = 100,vmax = -100, vcurrent;
 
-void wmCallback(WiFiManager *wm){
-  display.firstPage();
-  do{
-    display.fillScreen(GxEPD_WHITE);
-    display.setCursor(0,20);
-    display.println("Set AP, connect to");
-    display.println("ThingSpeak eDisplay");
-    display.println("Browse to");
-    display.println("   192.168.4.1");
-
-  }while (display.nextPage());
-}
-
 void setup(void) {
     Serial.begin(115200);
     Serial.println("\n\nthingspeak edisplay");
 
 
-    WiFiManager wifiManager;
-    wifiManager.setAPCallback(wmCallback);
+    WiFi.begin(SSID, PASSWORD);
 
-    // wifiManager.resetSettings();
+    while (WiFi.status() != WL_CONNECTED) {
+      delay(100);
+    }
 
-    wifiManager.autoConnect("ThingSpeak eDisplay");
     Serial.print("IP Address: ");
     Serial.println(WiFi.localIP());
-    delay(100);
+    delay(50);
 
     getReading();
     WiFi.mode(WIFI_OFF);
