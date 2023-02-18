@@ -7,7 +7,7 @@ bin:
 
 
 flash:
-	make ota
+	make serial
 
 serial:
 	- pkill -9 -f microcom

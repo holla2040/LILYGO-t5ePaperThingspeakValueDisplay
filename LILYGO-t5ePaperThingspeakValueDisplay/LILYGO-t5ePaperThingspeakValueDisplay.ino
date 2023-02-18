@@ -13,7 +13,6 @@
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
 #include <WiFiManager.h>
-#include <ArduinoOTA.h>
 
 #include <GxEPD2_BW.h>
 #include <Fonts/FreeMonoBold9pt7b.h>
@@ -47,19 +46,8 @@ void wmCallback(WiFiManager *wm){
 
 void setup(void) {
     Serial.begin(115200);
-    Serial.println("\n\nthingspeak display");
+    Serial.println("\n\nthingspeak edisplay");
 
-  display.init(115200, true, 2, false);
-  display.setTextColor(GxEPD_BLACK);
-  display.firstPage();
-  display.setRotation(1);
-  display.setFont(&FreeMonoBold9pt7b);
-
-  do{
-    display.fillScreen(GxEPD_WHITE);
-    display.setCursor(0,20);
-    display.print("Connecting");   //print the text
-  }while (display.nextPage());
 
     WiFiManager wifiManager;
     wifiManager.setAPCallback(wmCallback);
@@ -67,51 +55,26 @@ void setup(void) {
     // wifiManager.resetSettings();
 
     wifiManager.autoConnect("ThingSpeak eDisplay");
-
     Serial.print("IP Address: ");
     Serial.println(WiFi.localIP());
+    delay(100);
 
+    getReading();
+    WiFi.mode(WIFI_OFF);
 
-    ArduinoOTA
-    .onStart([]() {
-      String type;
-      if (ArduinoOTA.getCommand() == U_FLASH)
-        type = "sketch";
-      else  // U_SPIFFS
-        type = "filesystem";
+  display.init(115200, true, 2, false);
 
-      // NOTE: if updating SPIFFS this would be the place to 
-      // unmount SPIFFS using SPIFFS.end()
-      Serial.println("Start updating " + type);
-    })
-    .onEnd([]() {
-      Serial.println("\nEnd");
-    })
-    .onProgress([](unsigned int progress, unsigned int total) {
-      Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
-    })
-    .onError([](ota_error_t error) {
-      Serial.printf("Error[%u]: ", error);
-      if (error == OTA_AUTH_ERROR) Serial.println("Auth Failed");
-      else if (error == OTA_BEGIN_ERROR) Serial.println("Begin Failed");
-      else if (error == OTA_CONNECT_ERROR) Serial.println("Connect Failed");
-      else if (error == OTA_RECEIVE_ERROR) Serial.println("Receive Failed");
-      else if (error == OTA_END_ERROR) Serial.println("End Failed");
-    });
-
-    ArduinoOTA.begin();
-
+  display.setFullWindow();
+  display.setRotation(1);
+  display.setFont(&FreeMonoBold9pt7b);
+  display.setTextColor(GxEPD_BLACK);
+  display.fillScreen(GxEPD_WHITE);
   display.firstPage();
-  do{
-    display.fillScreen(GxEPD_WHITE);
-    display.setCursor(0,127);
-    display.print(WiFi.SSID());
-    display.print(" ");
-    display.print(WiFi.localIP());
-  }while (display.nextPage());
+  do {
+  } while (display.nextPage());
 
-    update();
-    Serial.printf("%dx%d",display.width(),display.height());
+
+  // Serial.printf("%dx%d\n",display.width(),display.height());
 }
 
 void displayUpdate(String label, String ts, String value) {
@@ -127,23 +90,27 @@ void displayUpdate(String label, String ts, String value) {
     Serial.printf("%s %s\n",time,value);
 
 
-    display.setFont(&sevensegment70pt7b);
-    display.setPartialWindow(0, 20, 250, 188);
+    display.setFullWindow();
+    display.setTextColor(GxEPD_BLACK);
+    display.setRotation(1);
+    display.setFont(&FreeMonoBold9pt7b);
+    display.fillScreen(GxEPD_WHITE);
     display.firstPage();
+
+    // display.setPartialWindow(0,0, display.width(), 20);
+    display.setPartialWindow(0, 0, display.width(), display.height());
     do{
-      display.fillScreen(GxEPD_WHITE);
+      display.setFont(&sevensegment70pt7b);
+      display.setTextColor(GxEPD_BLACK);
       display.setCursor(23,128);
       if (vcurrent > 100) {
         display.printf("%d", int(vcurrent));
       } else {
         display.printf("%0.1f", vcurrent);
       }
-    }while(display.nextPage());
 
-    do{
       display.setFont(&FreeMonoBold9pt7b);
-      display.setPartialWindow(0, 0, 250, 17);
-      display.fillScreen(GxEPD_WHITE);
+      display.setTextColor(GxEPD_BLACK);
       display.setCursor(0, 16);
       display.print(LABEL);
       display.setCursor(190, 17);
@@ -153,7 +120,7 @@ void displayUpdate(String label, String ts, String value) {
 
 }
 
-void update() {
+void getReading() {
     HTTPClient http;
     http.begin(TS_URL);
     int httpCode = http.GET();
@@ -162,7 +129,7 @@ void update() {
             String payload = http.getString();
             deserializeJson(reading, payload);
             Serial.println(payload);
-            displayUpdate(LABEL, reading["created_at"], reading["field2"]);
+            // displayUpdate(LABEL, reading["created_at"], reading["field2"]);
         }
     } else {
         Serial.printf("HTTP error: %s\n", http.errorToString(httpCode).c_str());
@@ -170,9 +137,10 @@ void update() {
 }
 
 void loop() {
-    if ((millis() - now) > updatePeriod) {
-        update();
-        now = millis();
-    }
-    ArduinoOTA.handle();
+    displayUpdate(LABEL, reading["created_at"], reading["field2"]);
+    Serial.printf("sleep %d\n",millis());
+    esp_sleep_enable_timer_wakeup(120000000);
+    delay(1000);
+    esp_deep_sleep_start();
+    Serial.println("awake");
 }
