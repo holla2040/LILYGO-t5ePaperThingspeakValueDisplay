@@ -1,0 +1,1 @@
+TTGO T5 2.13" ePaper Snap Fit Enclosure by gchart on Thingiverse: https://www.thingiverse.com/thing:4055993
