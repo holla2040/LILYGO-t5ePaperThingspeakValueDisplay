@@ -7,7 +7,9 @@ bin:
 
 
 flash:
+	- pkill -9 -f microcom
 	make serial
+	- pkill -9 -f sleep
 
 serial:
 	- pkill -9 -f microcom
